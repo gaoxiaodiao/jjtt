@@ -14,29 +14,40 @@ from bs4 import BeautifulSoup
 import jieba
 import jieba.analyse
 import re
+import sys
 def get_wordcloud(text):
     tags = jieba.analyse.extract_tags(text,topK=50)
     for tag in tags:
         print(tag.encode('utf-8'))
 
 #根据用户uid获取其发布所有文章信息
-def get_hot_article_info(uid,count,hot_count):
-    headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0',
-            'Cookie':'tt_webid=6457127978488366605;'}
-    url = "http://www.toutiao.com/c/user/article/?page_type=1&user_id="+str(uid)+"&max_behot_time=0&count="+str(count)
-    r = requests.get(url,headers=headers)
-    infos = r.json()
-    new_info = {}
+def get_hot_article_info(uid,hot_count):
+    r = requests.get("http://www.toutiao.com")
+    webid = r.cookies['tt_webid']
+    print(webid)
+    headers={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'}
+    cookies = dict(tt_webid=webid)
+    time = "0";
     index = 1
-    ret = []
-    for info in infos['data']:
-        title = info['title']
-        count = info['go_detail_count']
-        item_id = info['item_id']
-        if count >= hot_count :
-            ret.append({'id':item_id,'title':title,'count':count})
-            print("%d-%s-%s-%s"%(index,title,count,info['detail_play_effective_count']))
-            index = index+1
+    while(True):
+        url = "https://www.toutiao.com/c/user/article/?page_type=1&user_id="+str(uid)+"&max_behot_time="+str(time)+"&count=100"
+        r = requests.get(url,headers=headers,cookies=cookies)
+        if r.status_code != 200:
+            break
+        infos = r.json()
+        if infos is None:
+            break
+        new_info = {}
+        ret = []
+        for info in infos['data']:
+            title = info['title']
+            count = info['go_detail_count']
+            item_id = info['item_id']
+            time = info['behot_time']
+            if count >= hot_count :
+                ret.append({'id':item_id,'title':title,'count':count})
+                print("%d-%s-%s-%s-%s"%(index,item_id,title,count,info['detail_play_effective_count']))
+                index = index+1
     return ret
 
 #根据关键字查找用户名及用户id
@@ -79,7 +90,7 @@ def get_article_content(item_id):
         return None
 #get_hot_article_info(6351943396,999,0)
 #get_hot_article_info(62257280632,999,0)
-#get_hot_article_info(50579991734,999,0)
+get_hot_article_info(sys.argv[1],0)
 #search_user_from_keyword("把妹")
 '''
 #根据用户名中的关键字,找出其所有文章
@@ -90,6 +101,6 @@ for each in user_infos:
     time.sleep(1)
     print("---------------------")
 '''
-html = get_article_content(6456978028344902157)
-print(html)
-get_wordcloud(html)
+#html = get_article_content(6456978028344902157)
+#print(html)
+#get_wordcloud(html)
